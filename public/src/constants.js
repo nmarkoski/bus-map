@@ -1,18 +1,14 @@
 export const MAP_ELEMENT_ID = "map";
 
-export const MAP_CENTER = {
-    lat: 42.0007,
-    lng: 21.4246,
-};
-export const MAP_BOUNDS = {
-    north: 42.19895100125,
-    south: 41.75894954504,
-    east: 22.195875701172,
-    west: 20.933134675262,
-};
-export const MAP_ZOOM = 13;
+export const MAP_CENTER = [41.9959, 21.4314];
+export const MAP_BOUNDS = [
+    [41.75894954504, 20.933134675262],
+    [42.19895100125, 22.195875701172],
+];
+export const MAP_ZOOM = 12;
 
-export const MAP_API_ID = "YOUR_MAP_ID";
+export const TILE_LAYER_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+export const TILE_LAYER_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 export const ENDPOINTS = {
     POSITIONS: "/api/rest-avl/rtpi/positions",

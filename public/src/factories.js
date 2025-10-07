@@ -1,6 +1,6 @@
 import { isVehicleInactive } from "./utils.js";
 
-export const createMarkerContent = (vehicle, vehicleData) => {
+const createMarkerElement = (vehicle, vehicleData) => {
     const markerContent = document.createElement("div");
     markerContent.classList.add("marker");
     markerContent.textContent = vehicleData?.number.toString() ?? "?";
@@ -13,6 +13,25 @@ export const createMarkerContent = (vehicle, vehicleData) => {
     }
 
     return markerContent;
+};
+
+export const createMarkerIcon = (vehicle, vehicleData) => {
+    const markerElement = createMarkerElement(vehicle, vehicleData);
+    
+    document.body.appendChild(markerElement);
+    const width = markerElement.offsetWidth;
+    const height = markerElement.offsetHeight;
+    document.body.removeChild(markerElement);
+    
+    const markerHeight = height + 8;
+    
+    return L.divIcon({
+        html: markerElement.outerHTML,
+        className: "custom-marker-icon",
+        iconSize: [width, markerHeight],
+        iconAnchor: [width / 2, markerHeight],
+        popupAnchor: [0, -markerHeight],
+    });
 };
 
 const createInfoWindowItem = (identifier, value) => {
@@ -32,7 +51,7 @@ const createInfoWindowItem = (identifier, value) => {
     return infoWindowItem;
 };
 
-export const createInfoWindowContent = (vehicle, vehicleData) => {
+export const createPopupContent = (vehicle, vehicleData) => {
     const infoWindowContent = document.createElement("div");
     infoWindowContent.classList.add("infowindow");
 

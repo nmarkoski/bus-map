@@ -1,30 +1,23 @@
 import { getRealtimeData, getStaticData } from "./aggregator.js";
 import { getDataForVehicle } from "./utils.js";
-import { createInfoWindowContent, createMarkerContent } from "./factories.js";
+import { createMarkerIcon, createPopupContent } from "./factories.js";
 import {
-    MAP_API_ID,
+    MAP_ELEMENT_ID,
     MAP_BOUNDS,
     MAP_CENTER,
-    MAP_ELEMENT_ID,
     MAP_ZOOM,
+    TILE_LAYER_URL,
+    TILE_LAYER_ATTRIBUTION,
     MARKER_UPDATE_MS,
     STATIC_UPDATE_MS,
     VEHICLE_STALE_MS,
 } from "./constants.js";
-
-const {
-    Map: VisualMap,
-    TrafficLayer,
-    InfoWindow,
-} = await google.maps.importLibrary("maps");
-const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
 
 const createMapState = () => {
     return {
         map: null,
         staticData: null,
         markers: new Map(),
-        infoWindows: new Map(),
     };
 };
 
@@ -33,16 +26,10 @@ const updateStaticData = async (state) => {
 };
 
 const removeVehicle = (state, vehicleId) => {
-    // console.log(`Removing marker of vehicle with id: ${vehicleId}`);
-    const infoWin = state.infoWindows.get(vehicleId);
-    if (infoWin) {
-        infoWin.close();
-    }
-    state.infoWindows.delete(vehicleId);
-
     const marker = state.markers.get(vehicleId);
     if (marker) {
-        marker.setMap(null);
+        marker.closePopup();
+        marker.remove();
     }
     state.markers.delete(vehicleId);
 };
@@ -69,41 +56,27 @@ const updateMarkers = async (state) => {
             return;
         }
 
-        const position = { lat: vehicle["lat"], lng: vehicle["lng"] };
+        const position = [vehicle["lat"], vehicle["lng"]];
         const vehicleData = getDataForVehicle(vehicle, state.staticData);
 
         if (state.markers.has(vehicleId)) {
             const marker = state.markers.get(vehicleId);
-            const infoWindow = state.infoWindows.get(vehicleId);
 
-            marker.position = position;
-            marker.title = vehicleId.toString();
-            marker.content = createMarkerContent(vehicle, vehicleData);
-            infoWindow.setContent(
-                createInfoWindowContent(vehicle, vehicleData),
-            );
+            marker.setLatLng(position);
+            marker.setIcon(createMarkerIcon(vehicle, vehicleData));
+            marker.getPopup().setContent(createPopupContent(vehicle, vehicleData));
         } else {
-            // console.log(`Adding marker of vehicle with id: ${vehicleId}`);
-            const marker = new AdvancedMarkerElement({
-                map: state.map,
-                position: position,
+            const icon = createMarkerIcon(vehicle, vehicleData);
+            const marker = L.marker(position, {
+                icon: icon,
                 title: vehicleId.toString(),
-                content: createMarkerContent(vehicle, vehicleData),
-            });
-            const infoWindow = new InfoWindow({
-                content: createInfoWindowContent(vehicle, vehicleData),
-            });
+            }).addTo(state.map);
 
-            google.maps.event.addListener(marker, "click", () => {
-                infoWindow.open({
-                    anchor: marker,
-                    map: state.map,
-                    shouldFocus: false,
-                });
+            marker.bindPopup(createPopupContent(vehicle, vehicleData), {
+                maxWidth: 300,
             });
 
             state.markers.set(vehicleId, marker);
-            state.infoWindows.set(vehicleId, infoWindow);
         }
     });
 };
@@ -111,21 +84,26 @@ const updateMarkers = async (state) => {
 export const initMap = async () => {
     const state = createMapState();
 
-    state.map = new VisualMap(document.getElementById(MAP_ELEMENT_ID), {
+    state.map = L.map(MAP_ELEMENT_ID, {
         center: MAP_CENTER,
-        restriction: {
-            latLngBounds: MAP_BOUNDS,
-            strictBounds: false,
-        },
         zoom: MAP_ZOOM,
-        clickableIcons: false,
-        streetViewControl: false,
-        disableDefaultUI: true,
-        //fullscreenControl: false,
-        gestureHandling: "greedy",
-        mapId: MAP_API_ID,
+        minZoom: 10,
+        maxBounds: MAP_BOUNDS,
+        maxBoundsViscosity: 1.0,
+        zoomControl: false,
+        bounceAtZoomLimits: false,
     });
-    new TrafficLayer({ map: state.map });
+
+    L.tileLayer(TILE_LAYER_URL, {
+        attribution: TILE_LAYER_ATTRIBUTION,
+    }).addTo(state.map);
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            state.map.closePopup();
+            document.activeElement?.blur();
+        }
+    });
 
     await updateStaticData(state);
     await updateMarkers(state);
